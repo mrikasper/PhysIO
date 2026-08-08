@@ -70,8 +70,11 @@ ticsAcq     = ticsAcq(idEchoes == (iSelectedEcho-1));
 %% Convert times into seconds and search next neighbour for closest 
 % slice/vol time stamp match to time vector
 
-% HACK: take care of interleaved acquisition; multiband?
-ticsAcq         = sort(ticsAcq);
+% Sort interleaved acquisitions chronologically while keeping the volume
+% and slice identifiers aligned with their acquisition timestamps.
+[ticsAcq, idxAcqOrder] = sort(ticsAcq);
+idVolumes       = idVolumes(idxAcqOrder);
+idSlices        = idSlices(idxAcqOrder);
 tAcqSeconds     = ticsAcq*dtTicSeconds - t_start; % relative timing to start of phys logfile
 
 % find time in physiological log time closest to time stamp of acquisition
@@ -109,6 +112,11 @@ end
 % extract start times of volume by detecting index change volume id
 indVolStarts = [1; find(diff(idVolumes) > 0) + 1]; 
 VOLLOCS = LOCS(indVolStarts);
+
+% Multiband logs contain one row per physical slice, so simultaneously
+% acquired slices map to the same sample. Keep one timing event per unique
+% acquisition time for subsequent slice-bundle construction.
+LOCS = unique(LOCS, 'stable');
 
 % if physiological logfile has blank periods, several acquisition volume
 % onsets will flog to the same "nearest neighbor" phys log sample, because
